@@ -22,7 +22,7 @@ export const zustandIDBStorage = {
     log("setItem done");
   },
   removeItem: async (name: string) => {
-    console.log("removeItem", name);
+    log("removeItem", name);
     await del(name, zustandStore);
     log("removeItem done");
   },

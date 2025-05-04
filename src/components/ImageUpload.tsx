@@ -10,10 +10,7 @@ export function ImageUpload() {
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       // Handle the uploaded files
-      console.log("Accepted files:", acceptedFiles);
-
       const { name } = await addImage(acceptedFiles[0]);
-      console.log("Image added");
       navigate(`/viewer/${name}`);
     },
     [addImage, navigate]
