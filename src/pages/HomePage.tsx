@@ -1,5 +1,4 @@
 import { ImageUpload } from "../components/ImageUpload";
-import { useImageStore } from "../store/imageStore";
 
 export default function HomePage() {
   return (
