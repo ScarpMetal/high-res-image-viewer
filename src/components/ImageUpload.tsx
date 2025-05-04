@@ -1,7 +1,15 @@
 import { useImageDrop } from "../hooks/useImageDrop";
 
 export function ImageUpload() {
-  const { getRootProps, getInputProps, isDragActive } = useImageDrop();
+  const {
+    getRootProps,
+    getInputProps,
+    isDragActive,
+    isDragReject,
+    titleText,
+    activeText,
+    supportsText,
+  } = useImageDrop();
 
   return (
     <div
@@ -13,7 +21,9 @@ export function ImageUpload() {
     min-h-[300px]
     ${
       isDragActive
-        ? "border-blue-500 bg-blue-50"
+        ? isDragReject
+          ? "border-red-500 bg-red-50"
+          : "border-blue-500 bg-blue-50"
         : "border-gray-300 hover:border-blue-400"
     }
   `}
@@ -21,15 +31,17 @@ export function ImageUpload() {
       <input {...getInputProps()} />
       <div className="text-center">
         {isDragActive ? (
-          <p className="text-blue-500 text-lg">Drop your image here...</p>
+          <p
+            className={`${
+              isDragReject ? "text-red-500" : "text-blue-500"
+            } text-lg`}
+          >
+            {activeText}
+          </p>
         ) : (
           <>
-            <p className="text-gray-600 text-lg mb-2">
-              Drag and drop your image here, or click to select
-            </p>
-            <p className="text-gray-500 text-sm">
-              Supports JPEG, PNG, GIF and WebP
-            </p>
+            <p className="text-gray-600 text-lg mb-2">{titleText}</p>
+            <p className="text-gray-500 text-sm">{supportsText}</p>
           </>
         )}
       </div>

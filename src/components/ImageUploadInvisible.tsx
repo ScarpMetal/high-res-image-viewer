@@ -11,7 +11,13 @@ export function ImageUploadInvisible({
   children,
   containerMethod = "absolute",
 }: ImageUploadInvisibleProps) {
-  const { getRootProps, getInputProps, isDragActive } = useImageDrop({
+  const {
+    getRootProps,
+    getInputProps,
+    isDragActive,
+    isDragReject,
+    activeText,
+  } = useImageDrop({
     noClick: true,
   });
 
@@ -33,12 +39,17 @@ export function ImageUploadInvisible({
       <input {...getInputProps()} />
       {isDragActive && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-100">
-          <div className="absolute inset-4 flex flex-col items-center justify-center border-2 border-dashed border-white p-8 rounded-lg">
-            <p className="text-white text-2xl font-bold">
-              Drop your image here
-            </p>
-            <p className="text-white text-sm mt-2">
-              This will replace the current image
+          <div
+            className={`absolute inset-4 flex flex-col items-center justify-center border-2 border-dashed p-8 rounded-lg ${
+              isDragReject ? "border-red-500" : "border-white"
+            }`}
+          >
+            <p
+              className={`${
+                isDragReject ? "text-red-500" : "text-white"
+              } text-2xl font-bold`}
+            >
+              {activeText}
             </p>
           </div>
         </div>
