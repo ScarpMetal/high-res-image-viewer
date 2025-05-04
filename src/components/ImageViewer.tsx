@@ -1,6 +1,18 @@
 import { createUseGesture, pinchAction, wheelAction } from "@use-gesture/react";
-import { motion, useDragControls, useMotionValue } from "motion/react";
-import { PointerEventHandler, useEffect, useRef, useState } from "react";
+import {
+  BoundingBox,
+  motion,
+  useDragControls,
+  useMotionValue,
+  useMotionValueEvent,
+} from "motion/react";
+import {
+  PointerEventHandler,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { constrain } from "../utils.ts/numberUtils";
 import { ImageViewerData } from "../types/imageTypes";
 import {
@@ -21,9 +33,60 @@ export function ImageViewer({ image }: ImageViewerProps) {
   const dragControls = useDragControls();
   const imageX = useMotionValue(0);
   const imageY = useMotionValue(0);
-  const offsetX = useMotionValue(0);
-  const offsetY = useMotionValue(0);
   const scale = useMotionValue(1);
+
+  const [dragConstraints, setDragConstraints] = useState<
+    BoundingBox | undefined
+  >(undefined);
+
+  const updateDragConstraints = useCallback(() => {
+    if (!container) return setDragConstraints(undefined);
+
+    const currentScale = scale.get();
+    const imageWidth = image.width * currentScale;
+    const imageHeight = image.height * currentScale;
+    const rect = container.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+
+    const edgeTop = 0;
+    const edgeLeft = 0;
+    const edgeBottom = containerHeight - imageHeight;
+    const edgeRight = containerWidth - imageWidth;
+
+    const halfImageTop = edgeTop - imageHeight / 2;
+    const halfImageLeft = edgeLeft - imageWidth / 2;
+    const halfImageBottom = edgeBottom + imageHeight / 2;
+    const halfImageRight = edgeRight + imageWidth / 2;
+
+    const halfContainerTop = edgeTop + containerHeight / 2 - imageHeight;
+    const halfContainerLeft = edgeLeft + containerWidth / 2 - imageWidth;
+    const halfContainerBottom = edgeBottom - containerHeight / 2 + imageHeight;
+    const halfContainerRight = edgeRight - containerWidth / 2 + imageWidth;
+
+    setDragConstraints({
+      top: Math.min(halfContainerTop, halfImageTop),
+      left: Math.min(halfContainerLeft, halfImageLeft),
+      bottom: Math.max(halfContainerBottom, halfImageBottom),
+      right: Math.max(halfContainerRight, halfImageRight),
+    });
+  }, [container, image, scale]);
+
+  useMotionValueEvent(scale, "change", () => {
+    updateDragConstraints();
+  });
+
+  useEffect(() => {
+    updateDragConstraints();
+
+    if (container) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateDragConstraints();
+      });
+      resizeObserver.observe(container);
+      return () => resizeObserver.disconnect();
+    }
+  }, [container, updateDragConstraints]);
 
   useGesture(
     {
@@ -108,13 +171,12 @@ export function ImageViewer({ image }: ImageViewerProps) {
           height: image.height,
           x: imageX,
           y: imageY,
-          translateX: offsetX,
-          translateY: offsetY,
           scale,
           originX: "left",
           originY: "top",
         }}
         drag
+        dragConstraints={dragConstraints}
         dragControls={dragControls}
         dragListener={false}
         dragTransition={{
