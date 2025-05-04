@@ -15,7 +15,10 @@ export default function Navbar() {
           </Link>
         </div>
         {isDev && (
-          <button onClick={clearStore} className="text-xl font-bold">
+          <button
+            onClick={() => void clearStore()}
+            className="text-sm font-bold"
+          >
             Clear Store
           </button>
         )}

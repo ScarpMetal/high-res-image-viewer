@@ -1,4 +1,5 @@
 import { createStore, get, set, del, clear } from "idb-keyval";
+import { StateStorage } from "zustand/middleware";
 
 const DEBUG_ZUSTAND_IDB_STORAGE = false;
 
@@ -9,10 +10,10 @@ const log = (message: string, ...args: unknown[]) => {
   console.log("[zustandIDBStorage]", message, ...args);
 };
 
-export const zustandIDBStorage = {
+export const zustandIDBStorage: StateStorage = {
   getItem: async (name: string) => {
     log("getItem", name);
-    const result = await get(name, zustandStore);
+    const result = await get<string>(name, zustandStore);
     log("getItem done", result);
     return result ?? null;
   },
@@ -26,9 +27,10 @@ export const zustandIDBStorage = {
     await del(name, zustandStore);
     log("removeItem done");
   },
-  clear: async () => {
-    log("clear");
-    await clear(zustandStore);
-    log("clear done");
-  },
 };
+
+export async function clearZustandIDBStore() {
+  log("clearZustandIDBStore");
+  await clear(zustandStore);
+  log("clearZustandIDBStore done");
+}

@@ -15,14 +15,15 @@ export default function ViewerPage() {
 
   useEffect(() => {
     if (!filename) {
-      navigate("/");
+      void navigate("/");
       return;
     }
     const image = getImageByFilename(filename);
     if (image) {
       setCurrentImage(image);
     } else if (_hasHydrated) {
-      navigate("/");
+      void navigate("/");
+      return;
     }
   }, [_hasHydrated, filename, getImageByFilename, navigate]);
 

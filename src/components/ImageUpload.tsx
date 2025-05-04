@@ -11,13 +11,13 @@ export function ImageUpload() {
     async (acceptedFiles: File[]) => {
       // Handle the uploaded files
       const { name } = await addImage(acceptedFiles[0]);
-      navigate(`/viewer/${name}`);
+      void navigate(`/viewer/${name}`);
     },
     [addImage, navigate]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: (acceptedFiles) => void onDrop(acceptedFiles),
     accept: {
       "image/*": [".jpeg", ".jpg", ".png", ".gif", ".webp"],
     },

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { ImageViewerData } from "../types/imageTypes";
-import { zustandIDBStorage } from "./zustandIDBStore";
+import { clearZustandIDBStore, zustandIDBStorage } from "./zustandIDBStore";
 
 const DEBUG_IMAGE_STORE = false;
 
@@ -14,7 +14,7 @@ export interface ImageViewerStore {
   images: ImageViewerData[];
   addImage: (file: File) => Promise<ImageViewerData>;
   getImageByFilename: (filename: string) => ImageViewerData | null;
-  clearStore: () => void;
+  clearStore: () => Promise<void>;
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }
@@ -59,7 +59,7 @@ export const useImageStore = create<ImageViewerStore>()(
               console.error(newImage);
               const storageEstimate = await navigator.storage.estimate();
               console.error("Navigator storage estimate", storageEstimate);
-              reject(error);
+              reject(error as Error);
             }
           };
 
@@ -67,7 +67,7 @@ export const useImageStore = create<ImageViewerStore>()(
             reader.readAsDataURL(file);
           } catch (error) {
             console.error("Error reading file:", error);
-            reject(error);
+            reject(error as Error);
           }
         });
       },
@@ -76,10 +76,10 @@ export const useImageStore = create<ImageViewerStore>()(
         return get().images.find((img) => img.name === filename) || null;
       },
 
-      clearStore: () => {
+      clearStore: async () => {
         set({ images: [] });
         localStorage.clear();
-        zustandIDBStorage.clear();
+        await clearZustandIDBStore();
       },
 
       _hasHydrated: false,
