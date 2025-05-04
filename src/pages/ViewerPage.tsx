@@ -8,7 +8,6 @@ import { ImageViewerData } from "../types/imageTypes";
 export default function ViewerPage() {
   const navigate = useNavigate();
   const { filename } = useParams<{ filename: string }>();
-  const store = useImageStore();
   const { _hasHydrated, getImageByFilename } = useImageStore();
   const [currentImage, setCurrentImage] = useState<ImageViewerData | null>(
     null
