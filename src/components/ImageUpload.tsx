@@ -1,27 +1,8 @@
-import { useCallback } from "react";
-import { useDropzone } from "react-dropzone";
-import { useImageStore } from "../store/imageStore";
-import { useNavigate } from "react-router-dom";
+import { useImageDrop } from "../hooks/useImageDrop";
 
 export function ImageUpload() {
-  const { addImage } = useImageStore();
-  const navigate = useNavigate();
+  const { getRootProps, getInputProps, isDragActive } = useImageDrop();
 
-  const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
-      // Handle the uploaded files
-      const { name } = await addImage(acceptedFiles[0]);
-      void navigate(`/viewer/${name}`);
-    },
-    [addImage, navigate]
-  );
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (acceptedFiles) => void onDrop(acceptedFiles),
-    accept: {
-      "image/*": [".jpeg", ".jpg", ".png", ".gif", ".webp"],
-    },
-  });
   return (
     <div
       {...getRootProps()}

@@ -4,6 +4,7 @@ import { Loading } from "../components/Loading";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ImageViewerData } from "../types/imageTypes";
+import { ImageUploadInvisible } from "../components/ImageUploadInvisible";
 
 export default function ViewerPage() {
   const navigate = useNavigate();
@@ -31,5 +32,9 @@ export default function ViewerPage() {
     return <Loading />;
   }
 
-  return <ImageViewer image={currentImage} />;
+  return (
+    <ImageUploadInvisible>
+      <ImageViewer key={currentImage.name} image={currentImage} />
+    </ImageUploadInvisible>
+  );
 }
