@@ -8,6 +8,7 @@ import { ImageViewerData } from "../types/imageTypes";
 export default function ViewerPage() {
   const navigate = useNavigate();
   const { filename } = useParams<{ filename: string }>();
+  const store = useImageStore();
   const { _hasHydrated, getImageByFilename } = useImageStore();
   const [currentImage, setCurrentImage] = useState<ImageViewerData | null>(
     null
@@ -18,13 +19,11 @@ export default function ViewerPage() {
       navigate("/");
       return;
     }
-    if (_hasHydrated) {
-      const image = getImageByFilename(filename);
-      if (image) {
-        setCurrentImage(image);
-      } else {
-        navigate("/");
-      }
+    const image = getImageByFilename(filename);
+    if (image) {
+      setCurrentImage(image);
+    } else if (_hasHydrated) {
+      navigate("/");
     }
   }, [_hasHydrated, filename, getImageByFilename, navigate]);
 

@@ -5,6 +5,11 @@ import { zustandIDBStorage } from "./zustandIDBStore";
 
 const DEBUG_IMAGE_STORE = false;
 
+const log = (message: string, ...args: unknown[]) => {
+  if (!DEBUG_IMAGE_STORE) return;
+  console.log("[imageStore]", message, ...args);
+};
+
 export interface ImageViewerStore {
   images: ImageViewerData[];
   addImage: (file: File) => Promise<ImageViewerData>;
@@ -89,14 +94,14 @@ export const useImageStore = create<ImageViewerStore>()(
       partialize: (state) => ({ images: state.images }),
       storage: createJSONStorage(() => zustandIDBStorage),
       onRehydrateStorage: (initialState) => {
-        if (DEBUG_IMAGE_STORE) {
-          console.log("onRehydrateStorage start", initialState);
-        }
-        return (state) => {
-          state?.setHasHydrated(true);
-          if (DEBUG_IMAGE_STORE) {
-            console.log("onRehydrateStorage end", state);
+        log("onRehydrateStorage start", initialState);
+
+        return (state, error) => {
+          if (error) {
+            console.error("onRehydrateStorage error", error);
           }
+          state?.setHasHydrated(true);
+          log("onRehydrateStorage end", state);
         };
       },
     }

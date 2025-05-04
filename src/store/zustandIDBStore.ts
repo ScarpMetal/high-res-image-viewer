@@ -14,7 +14,7 @@ export const zustandIDBStorage = {
     log("getItem", name);
     const result = await get(name, zustandStore);
     log("getItem done", result);
-    return result;
+    return result ?? null;
   },
   setItem: async (name: string, value: unknown) => {
     log("setItem", name, value);
