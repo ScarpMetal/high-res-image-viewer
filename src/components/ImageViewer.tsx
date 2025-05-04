@@ -97,6 +97,9 @@ export function ImageViewer({ image }: ImageViewerProps) {
       className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing"
       onPointerDown={handlePointerDown}
       ref={setContainer}
+      style={{
+        touchAction: "none",
+      }}
     >
       <motion.div
         style={{
