@@ -1,4 +1,9 @@
-import { createUseGesture, pinchAction, wheelAction } from "@use-gesture/react";
+import {
+  createUseGesture,
+  FullGestureState,
+  pinchAction,
+  wheelAction,
+} from "@use-gesture/react";
 import {
   BoundingBox,
   motion,
@@ -6,22 +11,18 @@ import {
   useMotionValue,
   useMotionValueEvent,
 } from "motion/react";
-import {
-  PointerEventHandler,
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-} from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { constrain } from "../utils.ts/numberUtils";
-import { ImageViewerData } from "../types/imageTypes";
+import { ImageViewerData, PinchMemo } from "../types/imageTypes";
 import {
   getInitialImageViewerState,
   getMaxScale,
   getMinScale,
+  getPinchZoomValues,
+  getWheelZoomValues,
 } from "../utils.ts/imageUtils";
 
-const useGesture = createUseGesture([pinchAction, wheelAction]);
+const useContainerGesture = createUseGesture([wheelAction, pinchAction]);
 
 interface ImageViewerProps {
   image: ImageViewerData;
@@ -29,6 +30,7 @@ interface ImageViewerProps {
 
 export function ImageViewer({ image }: ImageViewerProps) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [pinching, setPinching] = useState(false);
   const hasSetInitialScale = useRef(false);
   const dragControls = useDragControls();
   const imageX = useMotionValue(0);
@@ -88,45 +90,88 @@ export function ImageViewer({ image }: ImageViewerProps) {
     }
   }, [container, updateDragConstraints]);
 
-  useGesture(
+  const handleZoom = useCallback(
+    (
+      container: HTMLDivElement,
+      eventScale: number,
+      center: { x: number; y: number }
+    ) => {
+      // Get scale and it's limits
+      const currentScale = scale.get();
+      const minScale = getMinScale(image, container);
+      const maxScale = getMaxScale();
+      const newScale = constrain(eventScale, minScale, maxScale);
+
+      // Calculate image offset for new scale
+      const x = imageX.get();
+      const y = imageY.get();
+      const imageMouseXDelta = x - center.x;
+      const imageMouseYDelta = y - center.y;
+      const scaleDelta = newScale - currentScale;
+      const nextOffsetX = (imageMouseXDelta * scaleDelta) / currentScale;
+      const nextOffsetY = (imageMouseYDelta * scaleDelta) / currentScale;
+
+      imageX.jump(x + nextOffsetX);
+      imageY.jump(y + nextOffsetY);
+      scale.set(newScale);
+    },
+    [scale, image, imageX, imageY]
+  );
+
+  useContainerGesture(
     {
-      onWheel: ({ direction: [_, direction], currentTarget, event }) => {
+      onPointerDown: ({ event }) => {
+        if (pinching) return;
+        dragControls.start(event);
+      },
+      onWheel: (state) => {
+        const { currentTarget } = state;
+
         if (!(currentTarget instanceof HTMLDivElement)) return;
 
-        // Calculate mouse position relative to container
-        const rect = currentTarget.getBoundingClientRect();
-        const mouseX = event.x - rect.left;
-        const mouseY = event.y - rect.top;
-
-        // Calculate scale in logarithmic range
-        const currentScale = scale.get();
-        const minScale = getMinScale(image, currentTarget);
-        const maxScale = getMaxScale();
-        const logCurrent = Math.log(currentScale);
-        const logMin = Math.log(minScale);
-        const logMax = Math.log(maxScale);
-        const logRange = logMax - logMin;
-        const positionInRange = (logCurrent - logMin) / logRange;
-        const zoomIntensity =
-          Math.exp(logMin + positionInRange * logRange) * 0.1;
-        const newScale = constrain(
-          currentScale + zoomIntensity * -direction,
-          minScale,
-          maxScale
+        const wheelZoomValues = getWheelZoomValues(
+          currentTarget,
+          state.event,
+          scale.get(),
+          getMinScale(image, currentTarget),
+          getMaxScale()
         );
 
-        // Calculate image offset for new scale
-        const x = imageX.get();
-        const y = imageY.get();
-        const imageMouseXDelta = x - mouseX;
-        const imageMouseYDelta = y - mouseY;
-        const scaleDelta = newScale - currentScale;
-        const nextOffsetX = (imageMouseXDelta * scaleDelta) / currentScale;
-        const nextOffsetY = (imageMouseYDelta * scaleDelta) / currentScale;
+        if (!wheelZoomValues) return;
 
-        imageX.jump(x + nextOffsetX);
-        imageY.jump(y + nextOffsetY);
-        scale.set(newScale);
+        const { scale: newScale, center } = wheelZoomValues;
+        handleZoom(currentTarget, newScale, center);
+      },
+      onPinchStart: () => {
+        setPinching(true);
+      },
+      onPinchEnd: () => {
+        setPinching(false);
+      },
+      onPinch: (state) => {
+        const { currentTarget, first, origin, movement, offset, memo } =
+          state as Omit<FullGestureState<"pinch">, "memo"> & {
+            memo: PinchMemo | undefined;
+          };
+
+        if (!(currentTarget instanceof HTMLDivElement)) return;
+
+        const pinchZoomValues = getPinchZoomValues(
+          currentTarget,
+          first,
+          origin,
+          movement,
+          [imageX.get(), imageY.get()],
+          offset,
+          memo
+        );
+
+        if (!pinchZoomValues) return;
+
+        const { scale: newScale, center, memo: newMemo } = pinchZoomValues;
+        handleZoom(currentTarget, newScale, center);
+
+        return newMemo;
       },
     },
     {
@@ -134,12 +179,11 @@ export function ImageViewer({ image }: ImageViewerProps) {
       wheel: {
         preventDefault: true,
       },
+      pinch: {
+        preventDefault: true,
+      },
     }
   );
-
-  const handlePointerDown: PointerEventHandler<HTMLDivElement> = (event) => {
-    dragControls.start(event);
-  };
 
   useEffect(() => {
     if (!hasSetInitialScale.current && container) {
@@ -155,10 +199,24 @@ export function ImageViewer({ image }: ImageViewerProps) {
     }
   }, [scale, container, image, imageX, imageY]);
 
+  useEffect(() => {
+    const handler = (e: Event) => e.preventDefault();
+    document.addEventListener("gesturestart", handler);
+    document.addEventListener("gesturechange", handler);
+    document.addEventListener("gestureend", handler);
+    return () => {
+      document.removeEventListener("gesturestart", handler);
+      document.removeEventListener("gesturechange", handler);
+      document.removeEventListener("gestureend", handler);
+    };
+  }, []);
+
   return (
     <div
-      className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing"
-      onPointerDown={handlePointerDown}
+      className={`absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing ${
+        pinching ? "bg-amber-950" : ""
+      }`}
+      // TODO: Remove the amber background for debugging pinch gestures
       ref={setContainer}
       style={{
         touchAction: "none",
@@ -175,7 +233,7 @@ export function ImageViewer({ image }: ImageViewerProps) {
           originX: "left",
           originY: "top",
         }}
-        drag
+        drag={!pinching}
         dragConstraints={dragConstraints}
         dragControls={dragControls}
         dragListener={false}
